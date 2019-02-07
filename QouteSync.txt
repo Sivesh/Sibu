@@ -1,0 +1,15 @@
+// Name: Quote to Sync Using Finalization Checkbox. //
+Trigger SyncQuote on Quote(after insert, after update)
+ {
+   List<Opportunity> OI= new List<Opportunity>();
+   for(Quote newQuote : Trigger.new)
+    {
+       Quote oldQuote = Trigger.oldMap.get(newQuote.Id);
+       if(newQuote.Finalization__c = True)
+         {
+           newQuote.IsSyncing = TRUE;
+         }
+       oppsToSync.add(newQuote); 
+    }
+     update oppsToSync;
+ }
