@@ -1,0 +1,211 @@
+//ServicesFeedBack_Opp is using in visit plan and Opportunity
+public class ServicesFeedBack_Opp
+{
+    public string Oppid{get;set;}    
+    public Opportunity lstopp{get;set;}
+    
+    public string serid{get;set;}        
+    public Service_Order__c lstser {get;set;}
+    public Visit_Event__c vstevt {get;set;}
+    public string ServiceNo {get; set;}
+    
+    public List<id> setid = new List<id>();
+    public List<id> getsetid()
+    {
+        return setid;
+    }
+    public Set<String> selectedlst = new Set<String>();
+    public Set<String> getselectedlst()
+    {
+        return selectedlst;
+    }
+        public Set<Id> Set_Id = new Set<ID>();
+        public Set<Id> getSet_Id()
+        {
+            return Set_Id;
+        }
+    
+    public boolean Checkboxvalue{get; set;}
+    public String feedbackstring{get;set;}
+    public String feedbackstring1{get;set;}
+    public string emailResult {get; set;}
+    
+    public List<Contact> lstcon = new  List<Contact>();
+    public List<Contact> getlstcon() { return lstcon; }
+    
+    public List<SurveyTaker__c> SurTkn = new List<SurveyTaker__c>();
+    public List<SurveyTaker__c> getSurTkn() { return SurTkn; }
+    
+    public List<String> lststr = new  List<String>();
+    public List<String> getlststr() { return lststr; }    
+    public List<wrapper> lstwrp {get;set;}
+    
+    public Map<String,Contact> mapcon = new Map<String,Contact>();
+
+    public ServicesFeedBack_Opp(ApexPages.StandardController controller)
+    {
+        Oppid = ApexPages.currentPage().getParameters().get('Oid');  
+        serid = ApexPages.currentPage().getParameters().get('Vid'); 
+        
+        system.debug('Oppid'+Oppid);  
+        system.debug('serid '+serid);
+        lstser = new Service_Order__c();
+        if(serid !='' && serid != null)
+        {
+            vstevt = [Select id,Account_id_internal__c,Name,Service_Order__c,Service_Order__r.Name,Visit_Plan__c,Visit_Plan__r.id,Visit_Plan__r.Name,Opportunity__c,Opportunity__r.id,Account__c,Account__r.id,Type__c From Visit_Event__c Where id =: serid];
+            ServiceNo = vstevt.Visit_Plan__r.id;
+             if(vstevt.Opportunity__c != null)
+        {
+            lstopp =[Select id,AccountID from Opportunity Where id =: vstevt.Opportunity__r.id];
+            for(Account Accid : [Select id,Name From Account Where id =: lstopp.AccountID] ){
+                setid.add(Accid.id);
+            }
+            for(Contact ConId :[select id,AccountId,Account.Name,Job_Title__c,FirstName,MobilePhone,LastName,Name,Email From contact where AccountId =: setid])
+            {
+                system.debug('ConId'+ConId);
+                lstcon.add(ConId);
+                lststr.add(ConId.Email);
+            } 
+        } else if(vstevt.Account_id_internal__c != null){
+            for(Account Accid : [Select id,Name From Account Where id =: vstevt.Account_id_internal__c] ){
+                setid.add(Accid.id);
+            }
+            for(Contact ConId :[select id,AccountId,Account.Name,Job_Title__c,FirstName,MobilePhone,LastName,Name,Email From contact where AccountId =: setid])
+            {
+                system.debug('ConId'+ConId);
+                lstcon.add(ConId);
+                lststr.add(ConId.Email);
+            }     
+            
+        }   
+            /*if(vstevt.Service_Order__C != null){
+                lstser = [Select id, Account__c,Name From Service_Order__c where id =: vstevt.Service_Order__r.id];         
+                ServiceNo = vstevt.Visit_Plan__r.id;
+                system.debug('ServiceNo'+ServiceNo);
+                system.debug('lstser'+lstser);  
+                for(Account Accid : [Select id,Name From Account Where id =: lstser.Account__c] ){
+                    setid.add(Accid.id);
+                }
+                system.debug('setid'+setid);
+                for(Contact ConId :[select id,AccountId,Account.Name,Job_Title__c,FirstName,MobilePhone,LastName,Name,Email From contact where AccountId =: setid])
+                {
+                    lstcon.add(ConId);
+                    lststr.add(ConId.Email);
+                }
+            }*/ 
+        }
+         if(Oppid !='' && Oppid != null)
+        {
+            lstopp =[Select id,AccountID from Opportunity Where id =: Oppid];
+            for(Account Accid : [Select id,Name From Account Where id =: lstopp.AccountID] ){
+                setid.add(Accid.id);
+            }
+            for(Contact ConId :[select id,AccountId,Account.Name,Job_Title__c,FirstName,MobilePhone,LastName,Name,Email From contact where AccountId =: setid])
+            {
+                lstcon.add(ConId);
+                lststr.add(ConId.Email);
+            } 
+        }
+        system.debug('lstcon'+lstcon);  
+        system.debug('lststr'+lststr);
+        
+        lstwrp = new List<Wrapper>();
+        for(Contact Conwrp : lstcon)
+        {
+            lstwrp.add(new wrapper(False,Conwrp));
+           system.debug('Conwrp.Accountid'+Conwrp.Accountid);
+        } 
+    } 
+    public PageReference sendemail()
+    {
+    
+    
+        for(Wrapper w:lstwrp)
+        {
+            if(Test.isRunningTest()){
+            w.Checkboxvalue = true;
+            }
+            if(w.Checkboxvalue == true){
+            
+              Set_Id.add(w.Conwrp.id);
+                selectedlst.add(w.Conwrp.Email);
+                mapcon.put(w.Conwrp.Email,W.ConWrp);
+                system.debug('mapcon'+mapcon);
+            } 
+        }
+        system.debug('selectedlst'+selectedlst);
+
+        if(selectedlst == null)
+        {
+            ApexPages.addmessage(new ApexPages.message(ApexPages.severity.ERROR,'Select atleast one Emailid'));     
+        }
+        
+        IF(selectedlst.SIZE()>0)
+        {
+          for(Contact Con : [Select id,Name,Email,AccountID,Account.Name,Job_Title__c From Contact where id =: Set_Id])
+            {
+                List<Messaging.SingleEmailMessage> mails = new List<Messaging.SingleEmailMessage>();
+                Messaging.SingleEmailMessage mail = new Messaging.SingleEmailMessage();
+                if(serid != null && serid !=''){
+                 //feedbackstring = 'http://triveni-triveni.cs5.force.com/feedbackform/TakeSurvey?id=a2FO0000004IjMkMAK'+'&cId='+con.id+'&AccID='+Con.AccountID+'&VenID='+vstevt.id+'&VplID='+ServiceNo+'&SosID='+lstser.id;
+                  feedbackstring = 'http://triveni.force.com/feedbackform/TakeSurvey?id=a0x9000000aHsawAAC'+'&cId='+con.id+'&AccID='+Con.AccountID+'&VenID='+vstevt.id+'&VplID='+ServiceNo+'&SosID='+lstser.id;
+                }
+                if(Oppid != null && Oppid !=''){
+                 //feedbackstring = 'http://triveni-triveni.cs5.force.com/feedbackform/TakeSurvey?id=a2FO0000004IuIgMAK'+'&cId='+con.id+'&AccID='+Con.AccountID+'&OID='+Oppid+'&VenID='+'NONE'+'&VplID='+'NONE'+'&SosID='+'NONE';
+                 feedbackstring = 'http://triveni.force.com/feedbackform/TakeSurvey?id=a0x9000000TXOR7AAP'+'&cId='+con.id+'&AccID='+Con.AccountID+'&OID='+Oppid+'&VenID='+'NONE'+'&VplID='+'NONE'+'&SosID='+'NONE';
+                 }       
+                List<String> sendTo = new List<String>();
+                Sendto.add(Con.Email);
+                mail.setToAddresses(Sendto);
+                mail.setSenderDisplayName('Triveni - Customer Feedback');                  
+                mail.setSubject('FeedBack Form from Triveni');
+                String body = 'Dear Sir / Madam,';
+                body += '<br/><br/>Thank you very much for the interaction over the past few weeks.';
+                body += '<br/><br/> It has been a pleasure serving you in this course of time. It has always been our endeavor to seek feedback\'s continuously from  our customers, partners and stakeholders.';
+                body += '<br/><br/>We request you to please <a  href="'+feedbackstring+ '">click on the link </a> and share your valuable feedback with us.';
+                // body += '<br/><br/>Your feedback will help us in providing you a seamless customer experience.';
+                body += ' <br/><br/>Regards';
+                body += ' <br/>Triveni Team';
+                mail.setHtmlBody(body);
+                mails.add(mail);
+                Messaging.SingleEmailMessage[] messages = new List<Messaging.SingleEmailMessage> {mail};
+                Messaging.SendEmailResult[] results =  Messaging.sendEmail(mails);
+                if (results[0].success) 
+                {
+                    emailResult = 'The email was sent successfully.';
+                    ApexPages.AddMessage(new ApexPages.Message(ApexPages.Severity.Info,'Message:'+emailResult));
+                 } 
+                else 
+                {
+                    emailResult = 'The email failed to send: '  + results[0].errors[0].message;
+                    ApexPages.AddMessage(new ApexPages.Message(ApexPages.Severity.Info,'Message:'+emailResult));
+                }
+            }
+            if(serid != null && serid !=''){
+                PageReference Redr = new PageReference('/apex/VisitActual1?id='+ServiceNo);     
+                Redr.setRedirect(true);
+                return Redr;        
+            }
+            
+            else if(Oppid != null && Oppid !=''){
+                PageReference Redr = new PageReference('/'+Oppid);
+                Redr.setRedirect(true);
+                return Redr;
+            }
+           
+        }
+        return NULL; 
+        
+    }      
+    public class wrapper
+    {
+    public boolean Checkboxvalue{get;set;}
+    public Contact Conwrp{get;set;}
+    
+        public wrapper(boolean b, Contact con)
+        {        
+            Checkboxvalue = b;
+            Conwrp = con;           
+        }
+    }
+}
